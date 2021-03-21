@@ -2,6 +2,8 @@
 #include <string>
 #include <math.h>
 
+#define FIBER_STACK 1024 * 64
+
 namespace IlkoOS
 {
     namespace
@@ -27,50 +29,72 @@ namespace IlkoOS
             };
         };
 
-        static Process processes = Process(NULL);
+        Process *processes = NULL;
 
-        void push(ucontext_t *data)
+        void push(void func())
         {
-            struct Process *new_node = (struct Process *)malloc(sizeof(struct Process));
+            static ucontext_t context;
 
-            new_node->data = data;
+            if (processes != NULL)
+            {
+                //Sets the data of the new process;
+                getcontext(&context);
+                context.uc_link = processes->data;
+                context.uc_stack.ss_sp = malloc(FIBER_STACK);
+                context.uc_stack.ss_size = FIBER_STACK;
+                context.uc_stack.ss_flags = 0;
+                // void *func1 = reinterpret_cast<void *>(func);
+                makecontext(&context, func, 0);
 
-            new_node->next = &processes;
-            new_node->prev = NULL;
+                //Creates new Proccess;
+                Process *new_node = new Process(&context, NULL, processes);
 
-            if (&processes != NULL)
-                processes.prev = new_node;
+                //Creates new head;
+                processes = new_node;
+            }
+            else
+            {
+                // getcontext(&asd);
+                getcontext(&context);
+                // context.uc_link = &asd;
+                context.uc_stack.ss_sp = malloc(FIBER_STACK);
+                context.uc_stack.ss_size = FIBER_STACK;
+                context.uc_stack.ss_flags = 0;
+                // void *func1 = reinterpret_cast<void *>(func);
+                makecontext(&context, func, 0);
 
-            processes = *new_node;
+                processes = new Process(&context, NULL, NULL);
+            }
         }
     }
 
-    void *
-    initlibrary()
+    void initlibrary()
     {
-        int start = clock();
-        double diff;
-        Process proc1 = processes, proc2 = *processes.prev;
-        do
-        {
-            swapcontext(proc1.data, proc2.data);
-            diff = (clock() - start) / (double)(CLOCKS_PER_SEC);
+        // int start = clock();
+        // double diff;
+        // Process proc1 = processes;
+        // Process proc2 = *processes.prev;
+        // setcontext(processes->prev->data);
+        setcontext(processes->data);
 
-        } while (diff < 60.0);
+        puts("asd");
+        // setcontext(processes.prev->data);
+        // swapcontext(proc1.data, proc2.data);
+        // do
+        // {
+        //     diff = 0;
+        //     do
+        //     {
+        //         swapcontext(proc1.data, proc2.data);
+        //         diff = (clock() - start) / (double)(CLOCKS_PER_SEC);
+
+        //     } while (diff < 60.0);
+        // } while (true);
     };
 
-    int create_task(void *(*start_routine))
+    int create_task(void func())
     {
-        char st1[8192];
-
-        static ucontext_t context;
-        getcontext(&context);
-        context.uc_stack.ss_sp = st1;
-        context.uc_stack.ss_size = sizeof st1;
-
-        Process proc = Process(&context, &processes, NULL);
-
-        push(&context);
+        push(func);
 
         return 0;
     };
