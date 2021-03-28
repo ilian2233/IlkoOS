@@ -1,100 +1,94 @@
 #include <ucontext.h>
 #include <string>
 #include <math.h>
+// #include <thread_structures.h>
 
 #define FIBER_STACK 1024 * 64
+typedef struct tcb_t Task;
 
 namespace IlkoOS
 {
     namespace
     {
-        struct Process
+        struct Task
         {
-            ucontext_t *data;
-            struct Process *next;
-            struct Process *prev;
+            ucontext_t context;
+            void (*func)();
+            Task *next;
 
-            Process(ucontext_t *data)
+            Task()
             {
-                this->data = data;
+                this->context = ucontext_t();
+                this->func = NULL;
                 this->next = NULL;
-                this->prev = NULL;
-            };
+            }
 
-            Process(ucontext_t *data, Process *next, Process *prev)
+            Task(void (*func)(), Task *next)
             {
-                this->data = data;
+                ucontext_t *context = new ucontext_t();
+                //Sets the context of the new task;
+                getcontext(context);
+                context->uc_link = &next->context;
+                context->uc_stack.ss_sp = malloc(FIBER_STACK);
+                context->uc_stack.ss_size = FIBER_STACK;
+                context->uc_stack.ss_flags = 0;
+                makecontext(context, func, 0);
+
+                this->context = *context;
+                this->func = func;
                 this->next = next;
-                this->prev = prev;
-            };
-        };
+            }
 
-        Process *processes = NULL;
+        } * running_task, *task_queue;
 
-        void push(void func())
+        void push(void (*start_routine)())
         {
-            static ucontext_t context;
-
-            if (processes != NULL)
+            if (task_queue != NULL)
             {
-                //Sets the data of the new process;
-                getcontext(&context);
-                context.uc_link = processes->data;
-                context.uc_stack.ss_sp = malloc(FIBER_STACK);
-                context.uc_stack.ss_size = FIBER_STACK;
-                context.uc_stack.ss_flags = 0;
-                // void *func1 = reinterpret_cast<void *>(func);
-                makecontext(&context, func, 0);
+                // //Sets the context of the new task;
+                // getcontext(&context);
+                // // context.uc_link = &task_queue.context;
+                // context.uc_stack.ss_sp = malloc(FIBER_STACK);
+                // context.uc_stack.ss_size = FIBER_STACK;
+                // context.uc_stack.ss_flags = 0;
+                // makecontext(&context, start_routine, 0);
 
-                //Creates new Proccess;
-                Process *new_node = new Process(&context, NULL, processes);
-
-                //Creates new head;
-                processes = new_node;
+                //Creates new Task and sets to head;
+                task_queue = new Task(start_routine, task_queue);
             }
             else
             {
-                // getcontext(&asd);
-                getcontext(&context);
-                // context.uc_link = &asd;
-                context.uc_stack.ss_sp = malloc(FIBER_STACK);
-                context.uc_stack.ss_size = FIBER_STACK;
-                context.uc_stack.ss_flags = 0;
-                // void *func1 = reinterpret_cast<void *>(func);
-                makecontext(&context, func, 0);
+                // //Sets the context of the new task;
+                // getcontext(&context);
+                // context.uc_link = NULL;
+                // context.uc_stack.ss_sp = malloc(FIBER_STACK);
+                // context.uc_stack.ss_size = FIBER_STACK;
+                // context.uc_stack.ss_flags = 0;
+                // makecontext(&context, start_routine, 0);
 
-                processes = new Process(&context, NULL, NULL);
+                //Sets new task to head;
+                task_queue = new Task(start_routine, NULL);
             }
         }
     }
 
     void initlibrary()
     {
-        // int start = clock();
-        // double diff;
-        // Process proc1 = processes;
-        // Process proc2 = *processes.prev;
-        // setcontext(processes->prev->data);
-        setcontext(processes->data);
+        //Sets end to beggining creating a loop;
+        task_queue->next->next->next->next = task_queue;
 
-        puts("asd");
-        // setcontext(processes.prev->data);
-        // swapcontext(proc1.data, proc2.data);
-        // do
-        // {
-        //     diff = 0;
-        //     do
-        //     {
-        //         swapcontext(proc1.data, proc2.data);
-        //         diff = (clock() - start) / (double)(CLOCKS_PER_SEC);
-
-        //     } while (diff < 60.0);
-        // } while (true);
+        //Execute a function and change to next context;
+        while (true)
+        {
+            task_queue = task_queue->next;
+            running_task = task_queue;
+            setcontext(&running_task->context);
+        };
     };
 
-    int create_task(void func())
+    int create_task(void (*start_routine)())
     {
-        push(func);
+        push(start_routine);
 
         return 0;
     };
