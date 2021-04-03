@@ -77,13 +77,13 @@ namespace IlkoOS
         //Sets end to beggining creating a loop;
         task_queue->next->next->next->next = task_queue;
 
-        //Execute a function and change to next context;
-        while (true)
-        {
-            task_queue = task_queue->next;
-            running_task = task_queue;
-            setcontext(&running_task->context);
-        };
+        // //Execute a function and change to next context;
+        // while (true)
+        // {
+        task_queue = task_queue->next;
+        running_task = task_queue;
+        setcontext(&running_task->context);
+        // };
     };
 
     int create_task(void (*start_routine)())
