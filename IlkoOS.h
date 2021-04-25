@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #define FIBER_STACK 1024 * 64
-#define INTERVAL 1
+#define INTERVAL 10000
 typedef struct tcb_t Task;
 static ucontext_t a;
 
@@ -20,13 +20,11 @@ namespace IlkoOS
         struct Task
         {
             ucontext_t *context;
-            void (*func)();
             Task *next;
 
             Task()
             {
                 this->context = NULL;
-                this->func = NULL;
                 this->next = NULL;
             }
 
@@ -46,7 +44,6 @@ namespace IlkoOS
                 makecontext(context, func, 0);
 
                 this->context = context;
-                this->func = func;
                 this->next = next;
             }
 
@@ -81,22 +78,20 @@ namespace IlkoOS
     void initlibrary()
     {
         //Sets end to beggining creating a loop;
-        task_queue->next->next->next->next = task_queue;
-
-        // Task *last_task = task_queue;
-        // while (last_task->next != NULL)
-        // {
-        //     last_task = last_task->next;
-        // }
-        // last_task->next = task_queue;
+        Task *last_task = task_queue;
+        while (last_task->next != NULL)
+        {
+            last_task = last_task->next;
+        }
+        last_task->next = task_queue;
 
         printf("Creating new timer.\n\n");
 
         struct itimerval it_val;
-        it_val.it_value.tv_sec = INTERVAL;
-        it_val.it_value.tv_usec = 0;
-        it_val.it_interval.tv_sec = INTERVAL;
-        it_val.it_interval.tv_usec = 0;
+        it_val.it_value.tv_sec = 0;
+        it_val.it_value.tv_usec = INTERVAL;
+        it_val.it_interval.tv_sec = 0;
+        it_val.it_interval.tv_usec = INTERVAL;
         if (setitimer(ITIMER_REAL, &it_val, NULL) == -1)
         {
             printf("Setitimer failed.\n");
@@ -105,12 +100,12 @@ namespace IlkoOS
 
         struct sigaction action;
         action.sa_handler = execute_task;
+        action.sa_flags = 0;
         if (sigemptyset(&action.sa_mask) == -1)
         {
             printf("Sigemptyset failed.\n");
             exit(1);
         };
-        action.sa_flags = 0;
         if (sigaction(SIGALRM, &action, NULL) == -1)
         {
             printf("Sigaction failed.\n");
