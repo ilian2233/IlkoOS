@@ -10,44 +10,47 @@
 
 void f1()
 {
-    while (true)
-    {
-        puts("-");
-    };
-    //setcontext(&a);
+	while (true)
+	{
+		puts("-");
+	};
 }
 
 void f2()
 {
-    while (true)
-    {
-        puts("+");
-    }; //setcontext(&a);
+	while (true)
+	{
+		puts("+");
+	};
 }
 
-// void f3()
-// {
-//     puts("/");
-//     setcontext(&a);
-// }
+void f3()
+{
+	while (true)
+	{
+		puts("/");
+	}
+}
 
-// void f4()
-// {
-//     puts("*");
-//     setcontext(&a);
-// }
+void f4()
+{
+	while (true)
+	{
+		puts("*");
+	}
+}
 
 //using namespace IlkoOS;
 
 int main()
 {
-    //Add functons;
-    create_task(f1);
-    create_task(f2);
-    // IlkoOS::create_task(f3);
-    // IlkoOS::create_task(f4);
+	//Add functons;
+	create_task(f1);
+	create_task(f2);
+	create_task(f3);
+	create_task(f4);
 
-    initlibrary();
+	initlibrary();
 
-    return 0;
+	return 0;
 }
